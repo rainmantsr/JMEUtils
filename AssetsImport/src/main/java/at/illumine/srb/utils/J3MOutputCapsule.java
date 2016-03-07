@@ -5,10 +5,13 @@
  */
 package at.illumine.srb.utils;
 
+import com.jme3.asset.TextureKey;
 import com.jme3.export.OutputCapsule;
 import com.jme3.export.Savable;
 import com.jme3.material.MatParam;
 import com.jme3.material.MatParamTexture;
+import com.jme3.texture.Texture;
+import com.jme3.texture.Texture.WrapMode;
 import com.jme3.util.IntMap;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -69,18 +72,69 @@ public class J3MOutputCapsule implements OutputCapsule {
     @Override
     public void writeStringSavableMap(Map<String, ? extends Savable> map, String name, Map<String, ? extends Savable> defVal) throws IOException {
         map.forEach((key, value) -> {
-            if ( defVal == null || !defVal.containsKey(key) || !defVal.get(key).equals(value)) {
+            if (defVal == null || !defVal.containsKey(key) || !defVal.get(key).equals(value)) {
                 putParameter(key, format(value));
             }
         });
     }
 
-    private String format(Savable value) {
+    protected String format(Savable value) {
+        if (value instanceof MatParamTexture) {
+            return formatMatParamTexture((MatParamTexture) value);
+        }
         if (value instanceof MatParam) {
             return ((MatParam) value).getValueAsString();
         }
 
         throw new UnsupportedOperationException(value.getClass() + ": Not supported yet.");
+    }
+
+    protected static String formatMatParamTexture(MatParamTexture param) {
+        StringBuilder l_ret = new StringBuilder();
+        Texture l_tex = (Texture) param.getValue();
+        TextureKey l_key;
+        if (l_tex != null) {
+            l_key = (TextureKey) l_tex.getKey();
+
+            if (l_key != null && l_key.isFlipY()) {
+                l_ret.append("Flip ");
+            }
+
+            l_ret.append(formatWrapMode(l_tex, Texture.WrapAxis.S));
+            l_ret.append(formatWrapMode(l_tex, Texture.WrapAxis.T));
+            l_ret.append(formatWrapMode(l_tex, Texture.WrapAxis.R));
+
+            //Min and Mag filter
+            Texture.MinFilter def = Texture.MinFilter.BilinearNoMipMaps;
+            if (l_tex.getImage().hasMipmaps() || (l_key != null && l_key.isGenerateMips())) {
+                def = Texture.MinFilter.Trilinear;
+            }
+            if (l_tex.getMinFilter() != def) {
+                l_ret.append("Min").append(l_tex.getMinFilter().name()).append(" ");
+            }
+
+            if (l_tex.getMagFilter() != Texture.MagFilter.Bilinear) {
+                l_ret.append("Mag").append(l_tex.getMagFilter().name()).append(" ");
+            }
+
+            l_ret.append("\"").append(l_key.getName()).append("\"");
+        }
+
+        return l_ret.toString();
+    }
+
+    protected static String formatWrapMode(Texture texVal, Texture.WrapAxis axis) {
+        WrapMode mode;
+        try {
+            mode = texVal.getWrap(axis);
+        } catch (IllegalArgumentException e) {
+            //this axis doesn't exist on the texture
+            return "";
+        }
+        if (mode != WrapMode.EdgeClamp) {
+            return "Wrap" + mode.name() + "_" + axis.name() + " ";
+        }
+        return "";
     }
 
     @Override

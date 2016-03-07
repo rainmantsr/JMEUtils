@@ -18,10 +18,8 @@ import com.jme3.util.TangentBinormalGenerator;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.logging.Level;
@@ -194,8 +192,12 @@ public class AssetsImport extends SimpleApplication {
             j3m_exp.save(material, out);
 
             logger.log(Level.INFO, "Set MaterialKey to: {0}", _exportPath.relativize(l_file.toPath()).toString());
-            material.setKey(new MaterialKey(_exportPath.relativize(l_file.toPath()).toString()));
+            material.setKey(new MaterialKey(convertPath(_exportPath.relativize(l_file.toPath()).toString())));
         }
+    }
+    
+    protected static String convertPath(String path) {
+        return path.replace("\\", "/");
     }
     
     protected void exportTextures(Path relativeModelPath, Material material) throws Exception {
@@ -226,7 +228,7 @@ public class AssetsImport extends SimpleApplication {
         
         Files.copy(l_inFile.toPath(), l_outFile.toPath(), StandardCopyOption.REPLACE_EXISTING );
         
-        l_newKey = new TextureKey( _exportPath.relativize(l_outFile.toPath()).toString(), l_key.isFlipY() );
+        l_newKey = new TextureKey( convertPath(_exportPath.relativize(l_outFile.toPath()).toString()), l_key.isFlipY() );
         l_newKey.setAnisotropy( l_key.getAnisotropy() );
         
         logger.log(Level.INFO, "Set TextureKey to: {0}", l_newKey.toString() );
